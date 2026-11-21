@@ -1,4 +1,5 @@
-import numpy as np
+
+   import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -13,6 +14,7 @@ st.set_page_config(
     page_title="Segmentación de clientes",
     layout="wide"
 )
+
 
 # Estilo de la página
 st.markdown("""
@@ -93,13 +95,19 @@ def analizar_clientes():
         [f"CLI-{i + 1:03d}" for i in range(len(clientes))]
     )
 
-    variables = ["Compras al mes", "Gasto por compra"]
+    variables = [
+        "Compras al mes",
+        "Gasto por compra"
+    ]
 
-    # Se ajustan las escalas de las dos variables
+    # Preparación de los datos
     escala = StandardScaler()
-    datos_escalados = escala.fit_transform(clientes[variables])
 
-    # Se comparan entre dos y seis grupos
+    datos_escalados = escala.fit_transform(
+        clientes[variables]
+    )
+
+    # Comparación de dos a seis grupos
     resultados = []
 
     for k in range(2, 7):
@@ -111,12 +119,14 @@ def analizar_clientes():
 
         etiquetas = modelo.fit_predict(datos_escalados)
 
+        puntuacion = silhouette_score(
+            datos_escalados,
+            etiquetas
+        )
+
         resultados.append({
             "Grupos": k,
-            "Silueta": silhouette_score(
-                datos_escalados,
-                etiquetas
-            )
+            "Silueta": puntuacion
         })
 
     siluetas = pd.DataFrame(resultados)
@@ -128,16 +138,18 @@ def analizar_clientes():
         ]
     )
 
-    # Se entrena el modelo final
+    # Entrenamiento del modelo final
     modelo = KMeans(
         n_clusters=mejor_k,
         random_state=42,
         n_init=10
     )
 
-    clientes["Grupo"] = modelo.fit_predict(datos_escalados)
+    clientes["Grupo"] = modelo.fit_predict(
+        datos_escalados
+    )
 
-    # Se calculan los promedios de cada grupo
+    # Promedios de cada grupo
     resumen = clientes.groupby("Grupo").agg(
         clientes=("Cliente", "count"),
         frecuencia=("Compras al mes", "mean"),
@@ -171,7 +183,7 @@ def analizar_clientes():
         lambda grupo: perfiles[grupo][0]
     )
 
-    # Se recuperan los centros en las unidades originales
+    # Centros expresados en las unidades originales
     centroides = pd.DataFrame(
         escala.inverse_transform(modelo.cluster_centers_),
         columns=variables
@@ -262,7 +274,10 @@ with fila_1[0]:
         )
 
         inicial.update_traces(
-            marker=dict(size=7, opacity=0.8)
+            marker=dict(
+                size=7,
+                opacity=0.8
+            )
         )
 
         st.plotly_chart(
@@ -282,8 +297,8 @@ with fila_1[1]:
         )
 
         st.caption(
-            "La estandarización centra cada variable en cero y "
-            "ajusta su dispersión."
+            "La estandarización centra cada variable en cero "
+            "y ajusta su dispersión."
         )
 
 
@@ -329,7 +344,12 @@ with fila_2[0]:
         )
 
         tabla = centroides[
-            ["Grupo", "Perfil", "Compras al mes", "Gasto por compra"]
+            [
+                "Grupo",
+                "Perfil",
+                "Compras al mes",
+                "Gasto por compra"
+            ]
         ].copy()
 
         tabla = tabla.rename(columns={
@@ -352,7 +372,9 @@ with fila_2[0]:
             "en las unidades originales."
         )
 
-        st.caption("Ejemplo de clientes y grupos asignados:")
+        st.caption(
+            "Ejemplo de clientes y grupos asignados:"
+        )
 
         st.dataframe(
             clientes[["Cliente", "Grupo"]].head(5),
@@ -375,12 +397,14 @@ with fila_2[1]:
             nombre, accion = perfiles[int(fila["Grupo"])]
 
             st.markdown(
-                f"**{nombre}** · {int(fila['clientes'])} clientes"
+                f"**{nombre}** · "
+                f"{int(fila['clientes'])} clientes"
             )
 
             st.caption(
                 f"{fila['frecuencia']:.1f} compras al mes · "
-                f"${fila['gasto']:,.0f} por compra. {accion}"
+                f"${fila['gasto']:,.0f} por compra. "
+                f"{accion}"
             )
 
 
@@ -414,7 +438,10 @@ with fila_2[2]:
         )
 
         final.update_traces(
-            marker=dict(size=7, opacity=0.8)
+            marker=dict(
+                size=7,
+                opacity=0.8
+            )
         )
 
         final.add_trace(
@@ -434,7 +461,10 @@ with fila_2[2]:
                     symbol="star",
                     size=17,
                     color="#301b43",
-                    line=dict(color="white", width=1)
+                    line=dict(
+                        color="white",
+                        width=1
+                    )
                 )
             )
         )
@@ -445,7 +475,7 @@ with fila_2[2]:
         )
 
 
-# Simulador
+# Simulador de un cliente
 with st.container(border=True):
     st.subheader("Simulador de un cliente")
 
@@ -461,7 +491,8 @@ with st.container(border=True):
             "Compras al mes",
             min_value=1,
             max_value=20,
-            value=6
+            value=6,
+            key="simulador_compras"
         )
 
     with entrada_2:
@@ -470,17 +501,26 @@ with st.container(border=True):
             min_value=250,
             max_value=12000,
             value=8500,
-            step=50
+            step=50,
+            key="simulador_gasto"
         )
 
-    if st.button("Clasificar"):
+    if st.button(
+        "Clasificar",
+        key="simulador_clasificar"
+    ):
         nuevo = pd.DataFrame(
             [[frecuencia, gasto]],
-            columns=["Compras al mes", "Gasto por compra"]
+            columns=[
+                "Compras al mes",
+                "Gasto por compra"
+            ]
         )
 
         grupo = int(
-            modelo.predict(escala.transform(nuevo))[0]
+            modelo.predict(
+                escala.transform(nuevo)
+            )[0]
         )
 
         nombre, accion = perfiles[grupo]
